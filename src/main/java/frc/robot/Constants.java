@@ -107,7 +107,7 @@ public final class Constants {
   public static final double kPYController = 0.05;
   public static final double kTeleDriveMaxAccelerationUnitsPerSecond = 3;
   public static final double kTeleDriveMaxAngularAccelerationUnitsPerSecond = 4;
-  public static final double kDeadband = 0.12;
+  public static final double kDeadband = 0.15;
   public static final double kTeleDriveMaxSpeedMetersPerSecond = 3;
   public static final double kTeleDriveMaxAngularSpeedRadiansPerSecond = 4;
   public static final double kdriveGearRation = 0.1481481481;// 0.1481481481 = 6.75:1

@@ -3,6 +3,7 @@
 // the WPILib BSD license file in the root directory of this project.
 
 package frc.robot.commands;
+import edu.wpi.first.hal.simulation.RoboRioDataJNI;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.SwerveSubsystem;
 
@@ -12,9 +13,9 @@ public class playSong extends Command {
   private String songNameFunc;
   private Boolean playSong;
 
-  public playSong(SwerveSubsystem swerveSubsystem, String songNameFunc, Boolean playSong) {
+  public playSong(SwerveSubsystem swerveSubsystem, Boolean playSong) {
     this.swerveSubsystem = swerveSubsystem;
-    this.songNameFunc = songNameFunc;
+    
     this.playSong = playSong;
 
     addRequirements(swerveSubsystem);
@@ -22,24 +23,20 @@ public class playSong extends Command {
 
   // Called when the command is initially scheduled.
   @Override
-  public void initialize() {swerveSubsystem.loadSong(songNameFunc);}
+  public void initialize() {
+  }
 
   // Called every time the scheduler runs while the command is scheduled.
   @Override
   public void execute() {
-
-    swerveSubsystem.loadSong(songNameFunc);
     swerveSubsystem.playSong();
-    
-   
-     
-    
   }
 
   // Called once the command ends or is interrupted.
   @Override
   public void end(boolean interrupted) {
     swerveSubsystem.pauseSong();
+    
   }
 
   // Returns true when the command should end.

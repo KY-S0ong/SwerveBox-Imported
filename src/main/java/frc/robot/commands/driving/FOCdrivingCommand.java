@@ -61,7 +61,7 @@ public class FOCdrivingCommand extends Command {
         // 2. Apply deadband
         xSpeed = (Math.abs(xSpeed) > Constants.kDeadband) ? xSpeed : 0;
         ySpeed = (Math.abs(ySpeed) > Constants.kDeadband) ? ySpeed : 0;
-        turningSpeed = (Math.abs(turningSpeed) > Constants.kDeadband) ? turningSpeed : 0;
+        turningSpeed = (Math.abs(turningSpeed) > .1) ? turningSpeed : 0;
 
         // 3. Make the driving smoother
         xSpeed = xLimiter.calculate(xSpeed) * Constants.kTeleDriveMaxSpeedMetersPerSecond;
@@ -74,10 +74,10 @@ public class FOCdrivingCommand extends Command {
         if (fieldOrientedFunction.get()) {
             // Relative to field 
             chassisSpeeds = ChassisSpeeds.fromFieldRelativeSpeeds(
-                    ySpeed, xSpeed, turningSpeed, swerveSubsystem.getRotation2d());
+                    xSpeed, ySpeed, turningSpeed, swerveSubsystem.getRotation2d());
         } else {
             // Relative to robot
-            chassisSpeeds = new ChassisSpeeds(ySpeed, xSpeed, turningSpeed);
+            chassisSpeeds = new ChassisSpeeds(xSpeed, ySpeed, turningSpeed);
         }
         // chassisSpeeds = ChassisSpeeds.fromFieldRelativeSpeeds(
         // x Speed, ySpeed, turningSpeed, swerveSubsystem.getRotation2d());

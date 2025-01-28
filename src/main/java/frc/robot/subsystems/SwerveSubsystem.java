@@ -70,6 +70,7 @@ import frc.robot.LimelightHelpers.LimelightResults;
 import frc.robot.LimelightHelpers.LimelightTarget_Classifier;
 import frc.robot.LimelightHelpers.LimelightTarget_Detector;
 import frc.robot.LimelightHelpers.PoseEstimate;
+import frc.robot.commands.playSong;
 
 public class SwerveSubsystem extends SubsystemBase {
 
@@ -121,19 +122,24 @@ public class SwerveSubsystem extends SubsystemBase {
 
     private SwerveDrivePoseEstimator poseEstimator = new SwerveDrivePoseEstimator(
             Constants.kDriveKinematics,
-            getRotation2d(), swerveModPose, initPose);
+            getRotation2d(), getPositions(), initPose);
 
-    
-
-    public SwerveSubsystem() {
+    public SwerveSubsystem(String song) {
         
-        AutoBuilder.configure(this::getPose,
+        loadSong(song);
+        configurePath();
+
+    }
+
+    public void configurePath() {
+        AutoBuilder.configure(
+                this::getPose,
                 this::resetOdometry,
                 this::getRelatChassisSpeeds,
                 this::setStatesFromChassisSpeeds,
                 new PPHolonomicDriveController(
-                        new PIDConstants(9, 0, 0),
-                        new PIDConstants(5, 0, 0)),
+                        new PIDConstants(16, 0, 0),
+                        new PIDConstants(4, 0, 0)),
                 Constants.robotConfig,
                 () -> {
                     var alliance = DriverStation.getAlliance();
@@ -148,7 +154,7 @@ public class SwerveSubsystem extends SubsystemBase {
     public Command followPathCommand(String pathName) {
         try {
             PathPlannerPath path = PathPlannerPath.fromPathFile(pathName);
-            
+
             return AutoBuilder.followPath(path);
 
         } catch (Exception e) {
@@ -163,6 +169,15 @@ public class SwerveSubsystem extends SubsystemBase {
                 backLeft.getSwerveModulePosition(),
                 frontRight.getSwerveModulePosition(),
                 backRight.getSwerveModulePosition()
+        };
+    }
+
+    public SwerveModulePosition[] getPositions(){
+        return new SwerveModulePosition[] {
+            frontLeft.getSwerveModulePosition(),
+            frontRight.getSwerveModulePosition(),
+            backLeft.getSwerveModulePosition(),
+            backRight.getSwerveModulePosition()
         };
     }
 
@@ -197,7 +212,7 @@ public class SwerveSubsystem extends SubsystemBase {
         backRight.setAutoDesiredState(desiredStates[3]);
     }
 
-    public void zeroStates(){
+    public void zeroStates() {
         frontLeft.resetStates();
         frontLeft.resetStates();
         backLeft.resetStates();
@@ -220,7 +235,7 @@ public class SwerveSubsystem extends SubsystemBase {
         ChassisSpeeds p = new ChassisSpeeds(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond,
                 -speeds.omegaRadiansPerSecond * 1.3);
         setModuleStates(Constants.kDriveKinematics.toSwerveModuleStates(p));
-        
+
     }
     // public void setStatesFromPoints(ChassisSpeeds speeds){
     // previousSetPoint = swerveSetpointGenerator.generateSetpoint(previousSetPoint,
@@ -228,7 +243,7 @@ public class SwerveSubsystem extends SubsystemBase {
     // }
 
     public double getHeading() {
-        return Math.IEEEremainder(gyro.getAngle(), 361);
+        return Math.IEEEremainder(gyro.getAngle(), 360);
     }
 
     public void zeroHeading() {
@@ -244,8 +259,12 @@ public class SwerveSubsystem extends SubsystemBase {
         // return new Pose2d(new Translation2d(gyro.getDisplacementX(),
         // gyro.getDisplacementY()), getRotation2d());
         Pose2d dis = poseEstimator.getEstimatedPosition();
+        
 
         var visionEstimatedPose = LimelightHelpers.getBotPose2d(Constants.limeLight);
+        LimelightHelpers.setCameraPose_RobotSpace(
+            Constants.limeLight, 
+            15, -3, 4,0, 30, 0);;
         try {
             if (visionEstimatedPose != null) {
                 poseEstimator.addVisionMeasurement(visionEstimatedPose,
@@ -258,16 +277,9 @@ public class SwerveSubsystem extends SubsystemBase {
                 dis.getRotation());
     }
 
-    public void setCurrentPose(Pose2d newPose) {
-        poseEstimator.resetPosition(
-                getRotation2d(),
-                swerveModPose,
-                newPose);
-    }
-
     public void resetOdometry(Pose2d pose) {
         // odometer.resetPosition(getRotation2d(),swerveModPose ,pose);
-        poseEstimator.resetPosition(pose.getRotation(), swerveModPose, pose);
+        poseEstimator.resetPosition(getRotation2d(), getPositions(), pose);
     }
 
     @Override
@@ -277,7 +289,9 @@ public class SwerveSubsystem extends SubsystemBase {
         updateFieldLocation();
         updateTelemetry();
 
-        poseEstimator.update(getRotation2d(), swerveModPose);
+        getPositions();
+
+        poseEstimator.update(getRotation2d(), getPositions());
         Logger.recordOutput("MyStates", getStates());
         Logger.recordOutput("MyPose", getPose());
 
@@ -319,7 +333,6 @@ public class SwerveSubsystem extends SubsystemBase {
 
     public void loadSong(String song) {
         configs.AllowMusicDurDisable = true;
-        
         orchestra.addInstrument(frontLeft.getDriveMotor());
         orchestra.addInstrument(frontLeft.getTurnMotor());
         orchestra.addInstrument(frontRight.getDriveMotor());
@@ -330,14 +343,11 @@ public class SwerveSubsystem extends SubsystemBase {
         orchestra.addInstrument(backRight.getTurnMotor());
 
         orchestra.loadMusic(song);
-
     }
-
     public void playSong() {
         orchestra.play();
     }
-
     public void pauseSong() {
-        orchestra.pause();
+        orchestra.stop();
     }
 }
