@@ -2,71 +2,51 @@ package frc.robot;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
 import com.pathplanner.lib.commands.PathPlannerAuto;
-import com.pathplanner.lib.config.RobotConfig;
+import com.pathplanner.lib.controllers.PathFollowingController;
 import com.pathplanner.lib.path.PathPlannerPath;
 
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Joystick;
-import edu.wpi.first.wpilibj.PS4Controller;
-import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
-import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
-import edu.wpi.first.wpilibj2.command.SwerveControllerCommand;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
-import edu.wpi.first.wpilibj2.command.button.Trigger;
+import edu.wpi.first.wpilibj2.command.button.POVButton;
 import frc.robot.commands.playSong;
-import frc.robot.commands.zeroHeading;
+import frc.robot.commands.coral.intakeCoral;
+import frc.robot.commands.coral.outCoral;
 import frc.robot.commands.driving.FOCdrivingCommand;
 import frc.robot.commands.driving.resetEncodersCommnad;
-import frc.robot.subsystems.PDPSubsystem;
+import frc.robot.commands.driving.zeroHeading;
 import frc.robot.subsystems.SwerveSubsystem;
+import frc.robot.subsystems.coral_intake;
 import frc.robot.subsystems.visionSystems;
 
 public class RobotContainer {
 
-    private final XboxController xc = new XboxController(0);
+    //private final XboxController xc = new XboxController(0);
     //private final PS4Controller ps = new PS4Controller(0);
-    //private final Joystick joystick = new Joystick(0);
+    private final Joystick drivejoystick = new Joystick(0);
+    private Joystick sysjoystick = new Joystick(1);
 
-    private SendableChooser<String> autoChooser;
-    private SendableChooser<String> songChooser;
-    private SendableChooser<String> playSong;
-    private String songChoice = "blackbetty.chrp";
+    private SendableChooser<Command> autoChoser;
+    private String songChoice = "WiiChannel.chrp";
     private boolean playFunc = false;
 
     private final visionSystems Cameras = new visionSystems();
+
     private final SwerveSubsystem swerveSubsystem = new SwerveSubsystem(songChoice);
+    private final coral_intake cIntake = new coral_intake();
     
     private final FOCdrivingCommand focDrive = new FOCdrivingCommand(
-            swerveSubsystem,
-            () -> - xc.getLeftY(),
-            () -> xc.getLeftX(),
-            () -> xc.getRightX(),
-            () -> !xc.getLeftBumperButton(),
-            () -> xc.getRightBumperButton());
-
-    /*private final FOCdrivingCommand focDrive = new FOCdrivingCommand(
         swerveSubsystem, 
-        ()-> -joystick.getY(), 
-        ()-> joystick.getX(), 
-        ()-> joystick.getZ(), 
-        ()-> !joystick.getRawButton(1), 
-        ()-> joystick.getRawButton(2)
-    );*/
-        
-    /*private final FOCdrivingCommand driveCommand = new FOCdrivingCommand(
-        swerveSubsystem, 
-        ()-> ps.getLeftX(), 
-        ()-> ps.getLeftY(), 
-        ()-> ps.getRightX(), 
-        ()-> !ps.getL3Button(), 
-        ()-> ps.getL2Button());*/
-
-    
+        ()-> -drivejoystick.getRawAxis(1), 
+        ()-> drivejoystick.getRawAxis(0), 
+        ()-> drivejoystick.getRawAxis(2), 
+        ()-> !drivejoystick.getRawButton(1) 
+    );
+ 
     public RobotContainer() {
         
         swerveSubsystem.setDefaultCommand(focDrive);
@@ -74,13 +54,12 @@ public class RobotContainer {
         registerCommands();
 
 
-        autoChooser = new SendableChooser<String>();
         
-        autoChooser.addOption("TestRun", "TestRun");
-        autoChooser.addOption("Calibration", "Calibration");
-        autoChooser.setDefaultOption("New Path", "New Path");
+        autoChoser = AutoBuilder.buildAutoChooser();
+        
 
-        SmartDashboard.putData("Auto Chooser", autoChooser);
+        //SmartDashboard.putData("Auto Chooser", autoChooser);
+        SmartDashboard.putData("Auto Chooser", autoChoser);
         
         
         
@@ -91,12 +70,16 @@ public class RobotContainer {
     }
 
     private void configureButtonBindings() {
-        new JoystickButton(xc, Constants.buttonA).whileTrue(new zeroHeading(swerveSubsystem));
-        new JoystickButton(xc, Constants.buttonB).whileTrue(new resetEncodersCommnad(swerveSubsystem));
-        new JoystickButton(xc, Constants.buttonY).toggleOnTrue(new playSong(swerveSubsystem, playFunc));
-        //new JoystickButton(joystick, 3).whileTrue(new zeroHeading(swerveSubsystem));
-        //new JoystickButton(joystick, 4).whileTrue(new resetEncodersCommnad(swerveSubsystem));
-        //new JoystickButton(joystick, 5).toggleOnTrue(new playSong(swerveSubsystem, playFunc));
+        //new JoystickButton(xc, Constants.buttonA).whileTrue(new zeroHeading(swerveSubsystem));
+        //new JoystickButton(xc, Constants.buttonB).whileTrue(new resetEncodersCommnad(swerveSubsystem));
+        //new JoystickButton(xc, Constants.buttonY).toggleOnTrue(new playSong(swerveSubsystem, playFunc));
+        
+        new JoystickButton(drivejoystick, 5).toggleOnTrue(new playSong(swerveSubsystem, playFunc));
+        new JoystickButton(drivejoystick, 6).whileTrue(new zeroHeading(swerveSubsystem));
+        new JoystickButton(drivejoystick, 7).whileTrue(new resetEncodersCommnad(swerveSubsystem));
+        
+        new POVButton(sysjoystick, 0).whileTrue(new outCoral(cIntake));
+        new POVButton(sysjoystick, 180).whileTrue(new intakeCoral(cIntake));
         
     }
 
@@ -110,7 +93,8 @@ public class RobotContainer {
         }*/
 
         try {
-             return swerveSubsystem.followPathCommand(autoChooser.getSelected());
+           //return new PathPlannerAuto(autoChoser.getSelected());
+           return autoChoser.getSelected();
         } catch (Exception e) {
             DriverStation.reportError("Big oops: " + e.getMessage(), e.getStackTrace());
             return Commands.none();

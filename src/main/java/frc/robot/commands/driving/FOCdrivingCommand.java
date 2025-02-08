@@ -14,28 +14,29 @@ public class FOCdrivingCommand extends Command {
 
     private final SwerveSubsystem swerveSubsystem;
     private final Supplier<Double> xSpdFunction, ySpdFunction, turningSpdFunction;
-    private final Supplier<Boolean> fieldOrientedFunction, preciseDriveFunction;
+    private final Supplier<Boolean> fieldOrientedFunction;
     private final SlewRateLimiter xLimiter, yLimiter, turningLimiter;
 
-    double xSpeed;
-    double ySpeed;
-    double turningSpeed;
+    private double xSpeed;
+    private double ySpeed;
+    private double turningSpeed;
 
-    ChassisSpeeds chassisSpeeds;
-    SwerveModuleState[] moduleStates;
+    private ChassisSpeeds chassisSpeeds;
+    private SwerveModuleState[] moduleStates;
 
     public FOCdrivingCommand(SwerveSubsystem swerveSubsystem,
             Supplier<Double> xSpdFunction,
             Supplier<Double> ySpdFunction,
             Supplier<Double> turningSpdFunction,
-            Supplier<Boolean> fieldOrientedFunction,
-            Supplier<Boolean> preciseDriveFunction) {
+            Supplier<Boolean> fieldOrientedFunction
+        ) {
+
         this.swerveSubsystem = swerveSubsystem;
         this.xSpdFunction = xSpdFunction;
         this.ySpdFunction = ySpdFunction;
         this.turningSpdFunction = turningSpdFunction;
         this.fieldOrientedFunction = fieldOrientedFunction;
-        this.preciseDriveFunction = preciseDriveFunction;
+        
         this.xLimiter = new SlewRateLimiter(Constants.kTeleDriveMaxAccelerationUnitsPerSecond);
         this.yLimiter = new SlewRateLimiter(Constants.kTeleDriveMaxAccelerationUnitsPerSecond);
         this.turningLimiter = new SlewRateLimiter(Constants.kTeleDriveMaxAngularAccelerationUnitsPerSecond);
@@ -51,18 +52,11 @@ public class FOCdrivingCommand extends Command {
         xSpeed = xSpdFunction.get();
         ySpeed = ySpdFunction.get();
         turningSpeed = turningSpdFunction.get();
-
-        if (preciseDriveFunction.get() == true) {
-            xSpeed = xSpeed / 2.9;
-            ySpeed = ySpeed / 2.9;
-            turningSpeed = turningSpeed / 1.5;
-        }
-
+        
         // 2. Apply deadband
         xSpeed = (Math.abs(xSpeed) > Constants.kDeadband) ? xSpeed : 0;
         ySpeed = (Math.abs(ySpeed) > Constants.kDeadband) ? ySpeed : 0;
-        turningSpeed = (Math.abs(turningSpeed) > .1) ? turningSpeed : 0;
-
+        turningSpeed = (Math.abs(turningSpeed) > Constants.kDeadband) ? turningSpeed : 0;
         // 3. Make the driving smoother
         xSpeed = xLimiter.calculate(xSpeed) * Constants.kTeleDriveMaxSpeedMetersPerSecond;
         ySpeed = yLimiter.calculate(ySpeed) * Constants.kTeleDriveMaxSpeedMetersPerSecond;

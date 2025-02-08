@@ -3,49 +3,53 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 2.0,
+        "x": 7.099772727272726,
         "y": 7.0
       },
       "prevControl": null,
       "nextControl": {
-        "x": 3.0,
-        "y": 7.0
+        "x": 7.678617343319257,
+        "y": 7.044347025458528
       },
-      "isLocked": true,
+      "isLocked": false,
+      "linkedName": "swerveBoxTest"
+    },
+    {
+      "anchor": {
+        "x": 1.8646874999999996,
+        "y": 6.542826704545455
+      },
+      "prevControl": {
+        "x": 1.9245170454545453,
+        "y": 7.539985795454545
+      },
+      "nextControl": {
+        "x": 1.8016772331929989,
+        "y": 5.492655591095449
+      },
+      "isLocked": false,
       "linkedName": null
     },
     {
       "anchor": {
         "x": 7.099772727272726,
-        "y": 7.0
+        "y": 4.807769886363635
       },
       "prevControl": {
-        "x": 6.099772727272726,
-        "y": 7.0
+        "x": 7.34338218467743,
+        "y": 4.7516055537050335
       },
       "nextControl": null,
       "isLocked": false,
-      "linkedName": "swerveBoxTest"
+      "linkedName": null
     }
   ],
   "rotationTargets": [],
   "constraintZones": [],
   "pointTowardsZones": [],
-  "eventMarkers": [
-    {
-      "name": "zeroHeading",
-      "waypointRelativePos": 0,
-      "endWaypointRelativePos": null,
-      "command": {
-        "type": "named",
-        "data": {
-          "name": "zeroHeading"
-        }
-      }
-    }
-  ],
+  "eventMarkers": [],
   "globalConstraints": {
-    "maxVelocity": 4.0,
+    "maxVelocity": 3.0,
     "maxAcceleration": 3.0,
     "maxAngularVelocity": 540.0,
     "maxAngularAcceleration": 720.0,
@@ -54,7 +58,7 @@
   },
   "goalEndState": {
     "velocity": 0,
-    "rotation": 0.0
+    "rotation": -145.4165005222523
   },
   "reversed": false,
   "folder": null,
@@ -62,5 +66,5 @@
     "velocity": 0,
     "rotation": 0.0
   },
-  "useDefaultConstraints": false
+  "useDefaultConstraints": true
 }

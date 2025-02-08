@@ -2,6 +2,7 @@ package frc.robot.subsystems;
 
 import static edu.wpi.first.units.Units.Degree;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,9 +23,11 @@ import com.pathplanner.lib.commands.PathPlannerAuto;
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
+import com.pathplanner.lib.controllers.PathFollowingController;
 import com.pathplanner.lib.path.PathPlannerPath;
 import com.pathplanner.lib.trajectory.PathPlannerTrajectory;
 import com.pathplanner.lib.util.DriveFeedforwards;
+import com.pathplanner.lib.util.PathPlannerLogging;
 import com.pathplanner.lib.util.swerve.SwerveSetpoint;
 import com.pathplanner.lib.util.swerve.SwerveSetpointGenerator;
 
@@ -46,7 +49,9 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
-import edu.wpi.first.math.proto.Trajectory;
+import edu.wpi.first.math.trajectory.Trajectory;
+import edu.wpi.first.math.trajectory.TrajectoryConfig;
+import edu.wpi.first.math.trajectory.TrajectoryGenerator;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
@@ -64,6 +69,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.SwerveControllerCommand;
 import frc.robot.Constants;
 import frc.robot.LimelightHelpers;
 import frc.robot.LimelightHelpers.LimelightResults;
@@ -110,57 +116,81 @@ public class SwerveSubsystem extends SubsystemBase {
             Constants.kBackRightDriveAbsoluteEncoderOffsetRad,
             Constants.kBackRightDriveAbsoluteEncoderReversed);
 
+    private Pigeon2 gyro = new Pigeon2(0);
+    private Pose2d initPose = new Pose2d();
+    private Field2d field = new Field2d();
+
     private SwerveModulePosition[] swerveModPose = new SwerveModulePosition[] {
             frontLeft.getSwerveModulePosition(),
             backLeft.getSwerveModulePosition(),
             frontRight.getSwerveModulePosition(),
             backRight.getSwerveModulePosition()
     };
-    private Pigeon2 gyro = new Pigeon2(0);
-    private Pose2d initPose = new Pose2d();
-    private Field2d field = new Field2d();
 
     private SwerveDrivePoseEstimator poseEstimator = new SwerveDrivePoseEstimator(
             Constants.kDriveKinematics,
             getRotation2d(), getPositions(), initPose);
 
+    private SwerveDriveOdometry odometry = new SwerveDriveOdometry(
+            Constants.kDriveKinematics,
+            getRotation2d(), getPositions(), initPose);
+
     public SwerveSubsystem(String song) {
-        
+
         loadSong(song);
         configurePath();
+
+        PathPlannerLogging.setLogCurrentPoseCallback((pose) -> odemeterUpdatePose());
 
     }
 
     public void configurePath() {
         AutoBuilder.configure(
-                this::getPose,
-                this::resetOdometry,
+                this::odometerGetPose,
+                this::odometerResetOdemetry,
                 this::getRelatChassisSpeeds,
                 this::setStatesFromChassisSpeeds,
                 new PPHolonomicDriveController(
-                        new PIDConstants(16, 0, 0),
-                        new PIDConstants(4, 0, 0)),
+                        new PIDConstants(16, 0,0.3),
+                        new PIDConstants(24, 0, 0.3)),
                 Constants.robotConfig,
                 () -> {
                     var alliance = DriverStation.getAlliance();
                     if (alliance.isPresent()) {
-                        return alliance.get() == DriverStation.Alliance.Red;
+                        return alliance.get() == DriverStation.Alliance.Blue;
                     }
                     return false;
                 },
                 this);
+        
     }
 
     public Command followPathCommand(String pathName) {
-        try {
-            PathPlannerPath path = PathPlannerPath.fromPathFile(pathName);
 
-            return AutoBuilder.followPath(path);
+        try {
+            initPose = PathPlannerPath.fromPathFile(pathName).getStartingHolonomicPose().get();
+            PathPlannerPath path = PathPlannerPath.fromPathFile(pathName);
+            //PathPlannerAuto.setCurrentTrajectory(path.generateTrajectory(getRelatChassisSpeeds(), getRotation2d(), Constants.robotConfig));
+            return new PathPlannerAuto(pathName);
+            //return new PathPlannerAuto(pathName);
 
         } catch (Exception e) {
             return Commands.none();
         }
+    }
 
+    public PathPlannerTrajectory generateTrajectory(String pathName){
+        try{
+            
+        return PathPlannerPath.fromPathFile(pathName).generateTrajectory(
+            getRelatChassisSpeeds(), getRotation2d(), Constants.robotConfig
+        );
+
+        //SwerveControllerCommand command = new SwerveControllerCommand(null, null, null, null, null, null, null, null, null);
+        }
+        catch(Exception e){
+            return null;
+        }     
     }
 
     public void updateSwerveModPose() {
@@ -170,14 +200,15 @@ public class SwerveSubsystem extends SubsystemBase {
                 frontRight.getSwerveModulePosition(),
                 backRight.getSwerveModulePosition()
         };
+
     }
 
-    public SwerveModulePosition[] getPositions(){
+    public SwerveModulePosition[] getPositions() {
         return new SwerveModulePosition[] {
-            frontLeft.getSwerveModulePosition(),
-            frontRight.getSwerveModulePosition(),
-            backLeft.getSwerveModulePosition(),
-            backRight.getSwerveModulePosition()
+                frontLeft.getSwerveModulePosition(),
+                frontRight.getSwerveModulePosition(),
+                backLeft.getSwerveModulePosition(),
+                backRight.getSwerveModulePosition()
         };
     }
 
@@ -232,7 +263,7 @@ public class SwerveSubsystem extends SubsystemBase {
     }
 
     public void setStatesFromChassisSpeeds(ChassisSpeeds speeds) {
-        ChassisSpeeds p = new ChassisSpeeds(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond,
+        ChassisSpeeds p = new ChassisSpeeds(speeds.vyMetersPerSecond, speeds.vxMetersPerSecond,
                 -speeds.omegaRadiansPerSecond * 1.3);
         setModuleStates(Constants.kDriveKinematics.toSwerveModuleStates(p));
 
@@ -243,12 +274,13 @@ public class SwerveSubsystem extends SubsystemBase {
     // }
 
     public double getHeading() {
-        return Math.IEEEremainder(gyro.getAngle(), 360);
+        double heading = gyro.getRotation2d().unaryMinus().getDegrees();
+        return Math.IEEEremainder(heading, 360);
     }
 
     public void zeroHeading() {
         gyro.reset();
-
+        odometry.resetPosition(getRotation2d(), getPositions(), getPose());
     }
 
     public Rotation2d getRotation2d() {
@@ -259,12 +291,10 @@ public class SwerveSubsystem extends SubsystemBase {
         // return new Pose2d(new Translation2d(gyro.getDisplacementX(),
         // gyro.getDisplacementY()), getRotation2d());
         Pose2d dis = poseEstimator.getEstimatedPosition();
-        
-
         var visionEstimatedPose = LimelightHelpers.getBotPose2d(Constants.limeLight);
-        LimelightHelpers.setCameraPose_RobotSpace(
-            Constants.limeLight, 
-            15, -3, 4,0, 30, 0);;
+        // LimelightHelpers.setCameraPose_RobotSpace(
+        // Constants.limeLight,
+        // 15, -3, 4,0, 30, 0);;
         try {
             if (visionEstimatedPose != null) {
                 poseEstimator.addVisionMeasurement(visionEstimatedPose,
@@ -282,14 +312,35 @@ public class SwerveSubsystem extends SubsystemBase {
         poseEstimator.resetPosition(getRotation2d(), getPositions(), pose);
     }
 
+    /* Testing */
+    public Pose2d odometerGetPose() {
+        double x = odometry.getPoseMeters().getX();
+        double y = odometry.getPoseMeters().getY();
+
+        //return new Pose2d(x, y, getRotation2d());
+        return odometry.getPoseMeters();
+    }
+
+    public void odemeterUpdatePose() {
+        odometry.update(getRotation2d(), getPositions());
+    }
+
+    public void odometerResetOdemetry(Pose2d pose) {
+        odometry.resetPosition(getRotation2d(), getPositions(), new Pose2d(pose.getMeasureX(), pose.getMeasureY(), getRotation2d()));
+        
+    }
+
     @Override
     public void periodic() {
         updateSwerveModPose();
+        odemeterUpdatePose();
+        getPositions();
+        getHeading();
+        getRotation2d();
+
         updateShuffleBoard();
         updateFieldLocation();
         updateTelemetry();
-
-        getPositions();
 
         poseEstimator.update(getRotation2d(), getPositions());
         Logger.recordOutput("MyStates", getStates());
@@ -310,6 +361,7 @@ public class SwerveSubsystem extends SubsystemBase {
         SmartDashboard.putNumber("translation x", getPose().getX());
         SmartDashboard.putNumber("translation y", getPose().getY());
         SmartDashboard.putNumber("rotation", getPose().getRotation().getDegrees());
+        SmartDashboard.putData("Field", field);
 
     }
 
@@ -320,12 +372,12 @@ public class SwerveSubsystem extends SubsystemBase {
             .getStructArrayTopic("MyStates", SwerveModuleState.struct).publish();
 
     private void updateTelemetry() {
-        pose2dPublisher.set(getPose());
+        pose2dPublisher.set(odometerGetPose());
         swervePublisher.set(getStates());
     }
 
     private void updateFieldLocation() {
-        field.setRobotPose(getPose());
+        field.setRobotPose(odometerGetPose());
     }
 
     private Orchestra orchestra = new Orchestra();
@@ -344,9 +396,11 @@ public class SwerveSubsystem extends SubsystemBase {
 
         orchestra.loadMusic(song);
     }
+
     public void playSong() {
         orchestra.play();
     }
+
     public void pauseSong() {
         orchestra.stop();
     }
